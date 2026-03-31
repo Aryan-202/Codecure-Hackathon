@@ -1,122 +1,80 @@
+import { z } from "zod";
+import { insertPatientSchema, insertDoctorSchema } from "./schema";
 
-import { z } from 'zod';
-import { insertDoctorSchema, insertPatientSchema, doctors, patients } from './schema';
+export const patientSchema = insertPatientSchema.extend({
+  id: z.number(),
+  age: z.number().optional(),
+  heartRate: z.number().optional(),
+  bloodPressureSystolic: z.number().optional(),
+  bloodPressureDiastolic: z.number().optional(),
+  oxygenSaturation: z.number().optional(),
+  respiratoryRate: z.number().optional(),
+});
 
-export const errorSchemas = {
-  validation: z.object({
-    message: z.string(),
-    field: z.string().optional(),
-  }),
-  notFound: z.object({
-    message: z.string(),
-  }),
-  internal: z.object({
-    message: z.string(),
-  }),
-};
+export const doctorSchema = insertDoctorSchema.extend({
+  id: z.number(),
+});
 
 export const api = {
-  doctors: {
-    list: {
-      method: 'GET' as const,
-      path: '/api/doctors',
-      responses: {
-        200: z.array(z.custom<typeof doctors.$inferSelect>()),
-      },
-    },
-    get: {
-      method: 'GET' as const,
-      path: '/api/doctors/:id',
-      responses: {
-        200: z.custom<typeof doctors.$inferSelect>(),
-        404: errorSchemas.notFound,
-      },
-    },
-    create: {
-      method: 'POST' as const,
-      path: '/api/doctors',
-      input: insertDoctorSchema,
-      responses: {
-        201: z.custom<typeof doctors.$inferSelect>(),
-      },
-    },
-  },
   patients: {
     list: {
-      method: 'GET' as const,
-      path: '/api/patients',
+      path: "/api/patients",
       responses: {
-        200: z.array(z.custom<typeof patients.$inferSelect>()),
+        200: z.array(patientSchema),
       },
     },
     create: {
-      method: 'POST' as const,
-      path: '/api/patients',
-      input: insertPatientSchema,
+      path: "/api/patients",
       responses: {
-        201: z.custom<typeof patients.$inferSelect>(),
-        400: errorSchemas.validation,
+        201: patientSchema,
       },
     },
     update: {
-      method: 'PUT' as const,
-      path: '/api/patients/:id',
-      input: insertPatientSchema.partial().extend({
-        assignedDoctorId: z.number().optional(),
-        roomNumber: z.string().optional(),
-        status: z.string().optional(),
-      }),
+      path: "/api/patients/:id",
       responses: {
-        200: z.custom<typeof patients.$inferSelect>(),
-        404: errorSchemas.notFound,
+        200: patientSchema,
       },
     },
     delete: {
-      method: 'DELETE' as const,
-      path: '/api/patients/:id',
+      path: "/api/patients/:id",
       responses: {
-        204: z.void(),
-        404: errorSchemas.notFound,
+        204: z.any(),
+      },
+    },
+  },
+  doctors: {
+    list: {
+      path: "/api/doctors",
+      responses: {
+        200: z.array(doctorSchema),
+      },
+    },
+    create: {
+      path: "/api/doctors",
+      responses: {
+        201: doctorSchema,
       },
     },
   },
   ai: {
     predict: {
-      method: 'POST' as const,
-      path: '/api/ai/predict',
-      input: z.object({
-        symptoms: z.string(),
-        vitals: z.object({
-          heartRate: z.number(),
-          bloodPressureSystolic: z.number(),
-          bloodPressureDiastolic: z.number(),
-          temperature: z.number(),
-          oxygenSaturation: z.number(),
-          respiratoryRate: z.number(),
-          consciousness: z.string().optional(),
-        }),
-      }),
+      path: "/api/ai/predict",
+      input: z.any(),
       responses: {
-        200: z.object({
-          disease: z.string(),
-          department: z.string(),
-          icon: z.string(),
-          urgency: z.string(),
-          recommendations: z.string(),
-        }),
+        200: z.any(),
       },
     },
   },
 };
 
-export function buildUrl(path: string, params?: Record<string, string | number>): string {
+export function buildUrl(path: string, params: Record<string, any>) {
   let url = path;
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (url.includes(`:${key}`)) {
-        url = url.replace(`:${key}`, String(value));
-      }
-    });
+  for (const key of Object.keys(params)) {
+    const value = params[key];
+    url = url.replace(`:${key}`, String(value));
   }
   return url;
 }
+
+export type InsertPatient = z.infer<typeof patientSchema>;
+export type InsertDoctor = z.infer<typeof insertDoctorSchema>;
